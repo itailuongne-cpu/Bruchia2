@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bru chia đôi</title>
+<style>
+:root{--bg:#f6f5f1;--card:#fff;--text:#1d1d1b;--muted:#6b6a65;--a:#e8f0fe;--ab:#4a7bd8;--b:#fdeee3;--bb:#d9763a;--line:#d8d6cf;--btn:#1d1d1b;--btnt:#fff;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#171716;--card:#222221;--text:#eeede8;--muted:#9a988f;--a:#1d2a44;--ab:#7ea3f0;--b:#3b2619;--bb:#f09a62;--line:#3a3935;--btn:#eeede8;--btnt:#171716}}
+:root[data-theme="dark"]{--bg:#171716;--card:#222221;--text:#eeede8;--muted:#9a988f;--a:#1d2a44;--ab:#7ea3f0;--b:#3b2619;--bb:#f09a62;--line:#3a3935;--btn:#eeede8;--btnt:#171716}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI","Noto Sans","PingFang SC","Microsoft YaHei",sans-serif;line-height:1.5}
+main{max-width:860px;margin:0 auto;padding:28px 16px 48px}
+h1{font-size:1.5rem;margin:0 0 4px}
+p.sub{margin:0 0 20px;color:var(--muted);font-size:.95rem}
+textarea{width:100%;min-height:120px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--text);font:inherit;resize:vertical}
+textarea:focus{outline:2px solid var(--ab);outline-offset:1px}
+.row{display:flex;gap:10px;align-items:center;margin:12px 0 22px;flex-wrap:wrap}
+button{background:var(--btn);color:var(--btnt);border:0;border-radius:10px;padding:10px 18px;font:inherit;font-weight:600;cursor:pointer}
+button.ghost{background:transparent;color:var(--text);border:1px solid var(--line);font-weight:500}
+.ratio{margin-left:auto;font-variant-numeric:tabular-nums;color:var(--muted);font-size:.95rem}
+.split{display:flex;gap:12px;min-height:150px}
+.cell{border-radius:14px;padding:16px;border:2px solid;min-width:70px;overflow-wrap:anywhere;font-size:1.15rem;display:flex;flex-direction:column;gap:8px;transition:flex-grow .35s ease}
+.cell small{font-size:.75rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;opacity:.75}
+.cell.a{background:var(--a);border-color:var(--ab)}
+.cell.b{background:var(--b);border-color:var(--bb)}
+.cell.a small{color:var(--ab)}.cell.b small{color:var(--bb)}
+.empty{color:var(--muted);text-align:center;padding:40px 0}
+@media (max-width:520px){.split{flex-direction:column}.cell{flex:none!important}}
+</style>
+</head>
+<body>
+<main>
+<textarea id="inp"></textarea>
+<div class="row">
+<button id="go">Chia ngẫu nhiên</button>
+<button class="ghost" id="clr">Xoá</button>
+<span class="ratio" id="ratio"></span>
+</div>
+<div id="out"></div>
+</main>
+<script>
+(function(){
+var inp=document.getElementById('inp'),out=document.getElementById('out'),ratio=document.getElementById('ratio');
+var last=-1,lastText='';
+function segments(t){
+  if(window.Intl&&Intl.Segmenter){
+    try{
+      var seg=new Intl.Segmenter(undefined,{granularity:'word'});
+      return Array.from(seg.segment(t)).map(function(s){return{t:s.segment,w:!!s.isWordLike}});
+    }catch(e){}
+  }
+  return t.split(/(\s+)/).filter(Boolean).map(function(s){return{t:s,w:!/^\s+$/.test(s)}});
+}
+function esc(s){return s.replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function split(){
+  var text=inp.value.trim();
+  if(!text){out.innerHTML='';ratio.textContent='';return}
+  var segs=segments(text),cands=[],seen=false;
+  var W=segs.filter(function(s){return s.w}).length,m=W>=4?2:1,k=0;segs.forEach(function(s,i){if(s.w){if(k>=m&&W-k>=m)cands.push(i);k++}});
+  if(!cands.length){out.innerHTML='';ratio.textContent='';return}
+  if(text!==lastText)last=-1;
+  var pool=cands.length>1?cands.filter(function(c){return c!==last}):cands;
+  var idx=pool[Math.floor(Math.random()*pool.length)];
+  last=idx;lastText=text;
+  var A=segs.slice(0,idx).map(function(s){return s.t}).join('').trim();
+  var B=segs.slice(idx).map(function(s){return s.t}).join('').trim();
+  var la=Math.max(A.length,1),lb=Math.max(B.length,1),tot=la+lb;
+  var pa=Math.round(la/tot*100);
+  out.innerHTML='<div class="split"><div class="cell a" style="flex:'+la+' 1 0"><small>Ô 1</small><span>'+esc(A)+'</span></div><div class="cell b" style="flex:'+lb+' 1 0"><small>Ô 2</small><span>'+esc(B)+'</span></div></div>';
+  ratio.textContent=pa+' : '+(100-pa);
+}
+document.getElementById('go').addEventListener('click',split);
+document.getElementById('clr').addEventListener('click',function(){inp.value='';out.innerHTML='';ratio.textContent='';inp.focus()});
+inp.addEventListener('keydown',function(e){if((e.ctrlKey||e.metaKey)&&e.key==='Enter')split()});
+split();
+})();
+</script>
+</body>
+</html>
